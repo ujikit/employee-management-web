@@ -1,3 +1,5 @@
+import { Employee } from "./employee";
+
 export interface Attendance {
   id: number;
   employee_id: number;
@@ -15,6 +17,7 @@ export interface Attendance {
   remarks: string | null;
   created_at: string;
   updated_at: string;
+  employee?: Employee;
 }
 
 export interface AttendanceResponse {

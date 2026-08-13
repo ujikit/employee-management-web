@@ -1,3 +1,5 @@
+import { Employee } from "./employee";
+
 export interface AllowancePeriod {
   id: number;
   period_year: number;
@@ -33,6 +35,7 @@ export interface AllowanceDetail {
   calculation_note: string | null;
   created_at: string;
   updated_at: string;
+  employee?: Employee;
 }
 
 export interface DetailResponse {
@@ -42,4 +45,25 @@ export interface DetailResponse {
   timestamp: number;
   path: string;
   data: AllowanceDetail[];
+}
+
+export interface AllowanceSetting {
+  id: number;
+  base_fare: number;
+  effective_start: string;
+  min_km: number;
+  max_km: number;
+  is_active: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SettingResponse {
+  statusCode: number;
+  method: string;
+  message: string;
+  timestamp: number;
+  path: string;
+  data: AllowanceSetting[];
 }

@@ -10,6 +10,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [roleName, setRoleName] = useState("EmployeeMgt");
+  const [roleId, setRoleId] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -34,13 +35,14 @@ export default function Sidebar() {
         );
         
         const payload = JSON.parse(jsonPayload);
-        const roleId = payload.role_id;
+        const currentRoleId = payload.role_id;
+        setRoleId(currentRoleId);
 
-        if (roleId === 1) {
+        if (currentRoleId === 1) {
           setRoleName("Superadmin");
-        } else if (roleId === 2) {
+        } else if (currentRoleId === 2) {
           setRoleName("Manager");
-        } else if (roleId === 3) {
+        } else if (currentRoleId === 3) {
           setRoleName("Admin");
         }
       }
@@ -49,12 +51,18 @@ export default function Sidebar() {
     }
   }, []);
 
+  // Define navigation items with allowed roles (1: Superadmin, 2: Manager, 3: Admin)
   const navItems = [
-    { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Employees", href: "/dashboard/employees", icon: Users },
-    { name: "Attendance", href: "/dashboard/attendance", icon: CalendarDays },
-    { name: "Allowance", href: "/dashboard/allowance", icon: Wallet },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: [1, 2, 3] },
+    { name: "Data Pegawai", href: "/dashboard/employees", icon: Users, roles: [2, 3] },
+    { name: "Presensi", href: "/dashboard/attendance", icon: CalendarDays, roles: [2, 3] },
+    { name: "Tunjangan", href: "/dashboard/allowance", icon: Wallet, roles: [2, 3] },
   ];
+
+  // Filter items based on user's role_id
+  const visibleNavItems = navItems.filter((item) => 
+    roleId === null || item.roles.includes(roleId)
+  );
 
   const handleLogout = async () => {
     try {
@@ -78,7 +86,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

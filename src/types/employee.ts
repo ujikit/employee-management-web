@@ -1,3 +1,29 @@
+export interface EducationInput {
+  education_level: string;
+  school_name: string;
+  graduation_year: number;
+}
+
+export interface CreateEmployeePayload {
+  nip: string;
+  name: string;
+  email: string;
+  phone: string;
+  birth_place: string;
+  district_id: number;
+  full_address: string;
+  distance_km: number;
+  birth_date: string;
+  marital_status: string;
+  children_count: number;
+  joined_at: string;
+  position_id: number;
+  department_id: number;
+  employment_type: string;
+  status: string;
+  educations: EducationInput[];
+}
+
 export interface Employee {
   id: number;
   nip: string;
