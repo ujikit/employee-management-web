@@ -5,6 +5,7 @@ import { Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import { Attendance, AttendanceResponse } from "@/src/types/attendance";
+import { API_URL } from "@/src/lib/config";
 
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
@@ -31,7 +32,7 @@ export default function AttendancePage() {
 
     try {
       const token = getCookie("access_token");
-      const res = await fetch("http://localhost:3000/api/v1/attendance/all", {
+      const res = await fetch(`${API_URL}/api/v1/attendance/all`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -83,7 +84,7 @@ export default function AttendancePage() {
         
 
         const token = getCookie("access_token");
-        const res = await fetch("http://localhost:3000/api/v1/attendance/create", {
+        const res = await fetch(`${API_URL}/api/v1/attendance/create`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

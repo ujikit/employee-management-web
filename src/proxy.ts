@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Retrieve the access_token set during OTP verification
   const token = request.cookies.get('access_token')?.value
   const { pathname } = request.nextUrl

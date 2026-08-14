@@ -6,6 +6,7 @@ import {
   AllowanceDetail, DetailResponse,
   AllowanceSetting, SettingResponse
 } from "@/src/types/allowance";
+import { API_URL } from "@/src/lib/config";
 
 // Utility function to get a specific cookie by name
 const getCookie = (name: string) => {
@@ -65,7 +66,7 @@ export default function AllowancePage() {
     setError("");
     try {
       const token = getCookie("access_token");
-      const res = await fetch("http://localhost:3000/api/v1/allowance/period", {
+      const res = await fetch(`${API_URL}/api/v1/allowance/period`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -87,7 +88,7 @@ export default function AllowancePage() {
     setError("");
     try {
       const token = getCookie("access_token");
-      const res = await fetch("http://localhost:3000/api/v1/allowance/detail", {
+      const res = await fetch(`${API_URL}/api/v1/allowance/detail`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -109,7 +110,7 @@ export default function AllowancePage() {
     setError("");
     try {
       const token = getCookie("access_token");
-      const res = await fetch("http://localhost:3000/api/v1/allowance/setting", {
+      const res = await fetch(`${API_URL}/api/v1/allowance/setting`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

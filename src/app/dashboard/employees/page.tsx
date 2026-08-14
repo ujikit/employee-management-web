@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { UserPlus, ShieldAlert } from "lucide-react";
 import { Employee, EmployeeResponse } from "@/src/types/employee";
+import { API_URL } from "@/src/lib/config";
 
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
@@ -48,7 +49,7 @@ export default function EmployeesPage() {
     
     try {
       const token = getCookie("access_token");
-      const res = await fetch("http://localhost:3000/api/v1/employee/all", {
+      const res = await fetch(`${API_URL}/api/v1/employee/all`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

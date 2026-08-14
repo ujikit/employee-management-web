@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { CreateEmployeePayload, EducationInput } from "@/src/types/employee";
+import { API_URL } from "@/src/lib/config";
 
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
@@ -96,7 +97,7 @@ export default function CreateEmployeePage() {
 
     try {
       const token = getCookie("access_token");
-      const res = await fetch("http://localhost:3000/api/v1/employee/create", {
+      const res = await fetch(`${API_URL}/api/v1/employee/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, Briefcase } from "lucide-react";
+import { API_URL } from "@/src/lib/config";
 
 export default function LoginPage() {
   const router = useRouter();
   
-  const [email, setEmail] = useState("super@yopmail.com");
+  const [email, setEmail] = useState("admin@yopmail.com");
   const [password, setPassword] = useState("Password@123");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +28,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/v1/authentication/signin", {
+      const res = await fetch(`${API_URL}/api/v1/authentication/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

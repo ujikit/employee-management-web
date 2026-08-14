@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { KeyRound, ShieldCheck, Briefcase, ArrowLeft } from "lucide-react";
+import { API_URL } from "@/src/lib/config";
 
 // Form logic extracted to properly wrap useSearchParams in a Suspense boundary (Next.js requirement)
 function OtpForm() {
@@ -12,7 +13,7 @@ function OtpForm() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
 
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState("0000");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -32,7 +33,7 @@ function OtpForm() {
 
     setIsLoading(true);
 
-    const res = await fetch("http://localhost:3000/api/v1/authentication/signin-verify-otp", {
+    const res = await fetch(`${API_URL}/api/v1/authentication/signin-verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, otp_code: otp }),
