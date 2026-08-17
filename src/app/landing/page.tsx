@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import Hero from "../../components/sections/Hero";
 import Features from "../../components/sections/Features";
+
+export const metadata: Metadata = {
+  title: "Welcome to EmployeeManagement",
+  description: "Explore the modern employee management platform designed for HR efficiency, seamless attendance logging, and flexible allowance setups.",
+  openGraph: {
+    title: "Welcome to EmployeeManagement",
+    description: "Explore the modern employee management platform designed for HR efficiency.",
+  },
+};
 
 export default function LandingPage() {
   const jsonLd = {

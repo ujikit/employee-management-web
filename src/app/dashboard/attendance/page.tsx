@@ -17,12 +17,31 @@ const getCookie = (name: string) => {
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<Attendance[]>([]);
+  const [roleId, setRoleId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    try {
+      const token = getCookie("access_token");
+      if (token) {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const payload = JSON.parse(jsonPayload);
+        setRoleId(payload.role_id);
+      }
+    } catch (err) {
+      console.error("Failed to parse token:", err);
+    }
+
     fetchAttendance();
   }, []);
 
@@ -80,9 +99,6 @@ export default function AttendancePage() {
           attendances: jsonResult
         };
 
-        console.log(JSON.stringify(payload));
-        
-
         const token = getCookie("access_token");
         const res = await fetch(`${API_URL}/api/v1/attendance/create`, {
           method: "POST",
@@ -96,7 +112,6 @@ export default function AttendancePage() {
         const result = await res.json();
 
         if (!res.ok) {
-          // Handle specific backend validation errors (e.g. 422 Unprocessable Entity)
           if (typeof result.message === "object" && result.message !== null) {
             const errorEntries = Object.entries(result.message);
             errorEntries.forEach(([fieldKey, errVal]) => {
@@ -110,8 +125,6 @@ export default function AttendancePage() {
         }
 
         toast.success(`Successfully uploaded ${jsonResult.length} attendance records!`);
-        
-        // Refresh the table with the new data
         await fetchAttendance();
         
       } catch (err: any) {
@@ -135,29 +148,34 @@ export default function AttendancePage() {
     reader.readAsArrayBuffer(file);
   };
 
+  // Only Admin (role_id === 3) is allowed to import Excel
+  const canImport = roleId === 3;
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Attendance Logs</h1>
 
-        {/* Excel Import Button */}
-        <div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".xlsx, .xls"
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            <Upload className="h-4 w-4" />
-            {isLoading ? "Processing..." : "Import Excel"}
-          </button>
-        </div>
+        {/* Excel Import Button (Admin Only) */}
+        {canImport && (
+          <div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".xlsx, .xls"
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              <Upload className="h-4 w-4" />
+              {isLoading ? "Processing..." : "Import Excel"}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

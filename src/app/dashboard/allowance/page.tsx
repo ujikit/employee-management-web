@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   AllowancePeriod, PeriodResponse,
   AllowanceDetail, DetailResponse,
@@ -8,7 +9,6 @@ import {
 } from "@/src/types/allowance";
 import { API_URL } from "@/src/lib/config";
 
-// Utility function to get a specific cookie by name
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
   const value = `; ${document.cookie}`;
@@ -26,12 +26,22 @@ export default function AllowancePage() {
   const [details, setDetails] = useState<AllowanceDetail[]>([]);
   const [settings, setSettings] = useState<AllowanceSetting[]>([]);
 
+  // Editable settings state mapped by setting ID
+  const [editForm, setEditForm] = useState<{
+    [key: number]: {
+      base_fare: number;
+      effective_start: string;
+      min_km: number;
+      max_km: number;
+    };
+  }>({});
+
   // UI states
   const [isLoading, setIsLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Decode JWT token to extract role_id
     try {
       const token = getCookie("access_token");
       if (token) {
@@ -119,7 +129,24 @@ export default function AllowancePage() {
       });
       const result: SettingResponse = await res.json();
       if (!res.ok) throw new Error(result.message || "Failed to fetch settings data");
-      setSettings(result.data || []);
+
+      const fetchedSettings = result.data || [];
+      setSettings(fetchedSettings);
+
+      // Populate edit form state with initial values
+      const initialFormState: { [key: number]: any } = {};
+      fetchedSettings.forEach((setting) => {
+        const formattedDate = setting.effective_start
+          ? new Date(setting.effective_start).toISOString().split("T")[0]
+          : "";
+        initialFormState[setting.id] = {
+          base_fare: setting.base_fare,
+          effective_start: formattedDate,
+          min_km: setting.min_km,
+          max_km: setting.max_km,
+        };
+      });
+      setEditForm(initialFormState);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
     } finally {
@@ -127,7 +154,78 @@ export default function AllowancePage() {
     }
   };
 
-  // Page Setting permission check (Only Admin with role_id === 3 can view)
+  const handleInputChange = (
+    id: number,
+    field: "base_fare" | "effective_start" | "min_km" | "max_km",
+    value: string | number
+  ) => {
+    setEditForm((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: field === "effective_start" ? value : Number(value) || 0,
+      },
+    }));
+  };
+
+  const handleUpdateAllSettings = async () => {
+    if (settings.length === 0) return;
+    setIsUpdating(true);
+
+    try {
+      const token = getCookie("access_token");
+
+      for (const setting of settings) {
+        const formData = editForm[setting.id];
+        if (!formData) continue;
+
+        const isoDate = formData.effective_start
+          ? new Date(formData.effective_start).toISOString()
+          : new Date().toISOString();
+
+        const payload = {
+          base_fare: Number(formData.base_fare),
+          effective_start: isoDate,
+          min_km: Number(formData.min_km),
+          max_km: Number(formData.max_km),
+        };
+
+        const res = await fetch(`${API_URL}/api/v1/allowance/setting/${setting.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          if (typeof result.message === "object" && result.message !== null) {
+            const errorEntries = Object.entries(result.message);
+            errorEntries.forEach(([fieldKey, errVal]) => {
+              const rawMessage = Array.isArray(errVal) ? errVal.join(", ") : String(errVal);
+              const cleanMessage = rawMessage.replace("translation.CLASS_VALIDATION.", "").replaceAll("_", " ").toLowerCase();
+              toast.error(`${fieldKey}: ${cleanMessage}`);
+            });
+            throw new Error("Validation failed");
+          }
+          throw new Error(result.message || "Failed to update allowance setting");
+        }
+      }
+
+      toast.success("Allowance settings updated successfully!");
+      await fetchSettings();
+    } catch (err: any) {
+      if (err.message && !err.message.includes("Validation failed")) {
+        toast.error(err.message || "Failed to update setting");
+      }
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const canViewSetting = roleId === 3;
 
   return (
@@ -140,8 +238,8 @@ export default function AllowancePage() {
           <button
             onClick={() => setActiveTab("detail")}
             className={`px-6 py-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "detail"
-                ? "border-blue-600 text-blue-600 bg-white"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              ? "border-blue-600 text-blue-600 bg-white"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
               }`}
           >
             Page Detail
@@ -149,8 +247,8 @@ export default function AllowancePage() {
           <button
             onClick={() => setActiveTab("period")}
             className={`px-6 py-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "period"
-                ? "border-blue-600 text-blue-600 bg-white"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              ? "border-blue-600 text-blue-600 bg-white"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
               }`}
           >
             Page Period
@@ -159,8 +257,8 @@ export default function AllowancePage() {
             <button
               onClick={() => setActiveTab("setting")}
               className={`px-6 py-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "setting"
-                  ? "border-blue-600 text-blue-600 bg-white"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                ? "border-blue-600 text-blue-600 bg-white"
+                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                 }`}
             >
               Page Setting
@@ -237,8 +335,8 @@ export default function AllowancePage() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${detail.eligibility_status === "ELIGIBLE"
-                                ? "text-green-700 bg-green-100 border-green-200"
-                                : "text-amber-700 bg-amber-100 border-amber-200"
+                              ? "text-green-700 bg-green-100 border-green-200"
+                              : "text-amber-700 bg-amber-100 border-amber-200"
                               }`}>
                               {detail.eligibility_status}
                             </span>
@@ -278,7 +376,7 @@ export default function AllowancePage() {
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                        <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
                           <div className="flex items-center justify-center gap-2">
                             <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -290,7 +388,7 @@ export default function AllowancePage() {
                       </tr>
                     ) : periods.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                        <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
                           No periods data found.
                         </td>
                       </tr>
@@ -339,6 +437,13 @@ export default function AllowancePage() {
             <div className="animate-in fade-in duration-300">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-slate-800">Allowance Configurations</h2>
+                <button
+                  onClick={handleUpdateAllSettings}
+                  disabled={isUpdating || settings.length === 0}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUpdating ? "Updating..." : "Update"}
+                </button>
               </div>
 
               {error && (
@@ -353,16 +458,15 @@ export default function AllowancePage() {
                     <tr>
                       <th scope="col" className="px-6 py-3">ID</th>
                       <th scope="col" className="px-6 py-3">Base Fare</th>
-                      <th scope="col" className="px-6 py-3">Distance Range</th>
-                      <th scope="col" className="px-6 py-3">Effective Date</th>
-                      <th scope="col" className="px-6 py-3 text-center">Status</th>
-                      <th scope="col" className="px-6 py-3">Last Updated</th>
+                      <th scope="col" className="px-6 py-3">Berlaku mulai</th>
+                      <th scope="col" className="px-6 py-3 text-center">Minimum kilometer</th>
+                      <th scope="col" className="px-6 py-3 text-center">Maximum kilometer</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
                           <div className="flex items-center justify-center gap-2">
                             <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -374,7 +478,7 @@ export default function AllowancePage() {
                       </tr>
                     ) : settings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
                           No settings configurations found.
                         </td>
                       </tr>
@@ -384,40 +488,40 @@ export default function AllowancePage() {
                           <td className="px-6 py-4 font-medium text-slate-900">
                             {setting.id}
                           </td>
-                          <td className="px-6 py-4 font-medium text-slate-900">
-                            {new Intl.NumberFormat("id-ID", {
-                              style: "currency",
-                              currency: "IDR",
-                              maximumFractionDigits: 0
-                            }).format(setting.base_fare)}
-                          </td>
-                          <td className="px-6 py-4 text-slate-700">
-                            {setting.min_km} KM <span className="mx-1 text-slate-400">-</span> {setting.max_km} KM
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={editForm[setting.id]?.base_fare ?? setting.base_fare}
+                                onChange={(e) => handleInputChange(setting.id, "base_fare", e.target.value)}
+                                className="w-32 px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                              />
+                              <span className="text-sm font-medium text-slate-500">km</span>
+                            </div>
                           </td>
                           <td className="px-6 py-4">
-                            {new Date(setting.effective_start).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric"
-                            })}
+                            <input
+                              type="date"
+                              value={editForm[setting.id]?.effective_start ?? ""}
+                              onChange={(e) => handleInputChange(setting.id, "effective_start", e.target.value)}
+                              className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
                           </td>
                           <td className="px-6 py-4 text-center">
-                            {setting.is_active ? (
-                              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 border border-green-200">
-                                Active
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                                Inactive
-                              </span>
-                            )}
+                            <input
+                              type="number"
+                              value={editForm[setting.id]?.min_km ?? setting.min_km}
+                              onChange={(e) => handleInputChange(setting.id, "min_km", e.target.value)}
+                              className="w-20 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-center text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
                           </td>
-                          <td className="px-6 py-4 text-slate-500">
-                            {new Date(setting.updated_at).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric"
-                            })}
+                          <td className="px-6 py-4 text-center">
+                            <input
+                              type="number"
+                              value={editForm[setting.id]?.max_km ?? setting.max_km}
+                              onChange={(e) => handleInputChange(setting.id, "max_km", e.target.value)}
+                              className="w-20 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-center text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
                           </td>
                         </tr>
                       ))

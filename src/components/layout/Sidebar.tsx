@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Wallet, Users, CalendarDays, LogOut, Briefcase } from "lucide-react";
+import { LayoutDashboard, Wallet, Users, UserCheck, CalendarDays, LogOut, Briefcase, Shield } from "lucide-react";
 import clsx from "clsx";
 
 export default function Sidebar() {
@@ -51,15 +51,15 @@ export default function Sidebar() {
     }
   }, []);
 
-  // Define navigation items with allowed roles (1: Superadmin, 2: Manager, 3: Admin)
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: [1, 2, 3] },
     { name: "Data Pegawai", href: "/dashboard/employees", icon: Users, roles: [2, 3] },
+    { name: "User", href: "/dashboard/users", icon: UserCheck, roles: [1] },
     { name: "Presensi", href: "/dashboard/attendance", icon: CalendarDays, roles: [2, 3] },
     { name: "Tunjangan", href: "/dashboard/allowance", icon: Wallet, roles: [2, 3] },
+    { name: "Role", href: "/dashboard/roles", icon: Shield, roles: [1] },
   ];
 
-  // Filter items based on user's role_id
   const visibleNavItems = navItems.filter((item) => 
     roleId === null || item.roles.includes(roleId)
   );

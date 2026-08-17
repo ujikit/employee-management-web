@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { UserPlus, ShieldAlert } from "lucide-react";
-import { Employee, EmployeeResponse } from "@/src/types/employee";
+import { UserPlus, ShieldAlert, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Employee, EmployeeResponse, PaginationMeta } from "@/src/types/employee";
 import { API_URL } from "@/src/lib/config";
 
 const getCookie = (name: string) => {
@@ -19,6 +19,21 @@ export default function EmployeesPage() {
   const [roleId, setRoleId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Pagination & Sorting states
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [sortBy, setSortBy] = useState("id");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const [meta, setMeta] = useState<PaginationMeta>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    total_pages: 1,
+    sort_by: "id",
+    sort_order: "asc",
+  });
 
   useEffect(() => {
     // Extract role_id from JWT token in cookies
@@ -39,23 +54,33 @@ export default function EmployeesPage() {
     } catch (err) {
       console.error("Failed to parse token:", err);
     }
-
-    fetchEmployees();
   }, []);
 
-  const fetchEmployees = async () => {
+  useEffect(() => {
+    fetchEmployees(page, limit, sortBy, sortOrder);
+  }, [page, limit, sortBy, sortOrder]);
+
+  const fetchEmployees = async (
+    currentPage: number,
+    currentLimit: number,
+    currentSortBy: string,
+    currentSortOrder: "asc" | "desc"
+  ) => {
     setIsLoading(true);
     setError("");
     
     try {
       const token = getCookie("access_token");
-      const res = await fetch(`${API_URL}/api/v1/employee/all`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        },
-      });
+      const res = await fetch(
+        `${API_URL}/api/v1/employee/all?page=${currentPage}&limit=${currentLimit}&sort_by=${currentSortBy}&sort_order=${currentSortOrder}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+        }
+      );
 
       const result: EmployeeResponse = await res.json();
 
@@ -64,11 +89,35 @@ export default function EmployeesPage() {
       }
 
       setEmployees(result.data || []);
+      if (result.meta) {
+        setMeta(result.meta);
+      }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSort = (columnKey: string) => {
+    if (sortBy === columnKey) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(columnKey);
+      setSortOrder("asc");
+    }
+    setPage(1); // Reset to page 1 on sort change
+  };
+
+  const renderSortIcon = (columnKey: string) => {
+    if (sortBy !== columnKey) {
+      return <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transition-colors" />;
+    }
+    return sortOrder === "asc" ? (
+      <ArrowUp className="h-3.5 w-3.5 text-blue-600" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+    );
   };
 
   // READ Permission: SuperAdmin (1) is hidden/blocked. Manager (2) and Admin (3) can view.
@@ -117,25 +166,48 @@ export default function EmployeesPage() {
             <table className="w-full text-sm text-left text-slate-600 whitespace-nowrap">
               <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th scope="col" className="px-6 py-3">ID</th>
-                  <th scope="col" className="px-6 py-3">NIP</th>
-                  <th scope="col" className="px-6 py-3">Name</th>
-                  <th scope="col" className="px-6 py-3">Contact</th>
-                  <th scope="col" className="px-6 py-3">Type</th>
-                  <th scope="col" className="px-6 py-3">Joined Date</th>
-                  <th scope="col" className="px-6 py-3 text-center">Status</th>
+                  <th scope="col" className="px-6 py-3 cursor-pointer select-none group" onClick={() => handleSort("id")}>
+                    <div className="flex items-center gap-1.5">
+                      <span>ID</span>
+                      {renderSortIcon("id")}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 cursor-pointer select-none group" onClick={() => handleSort("nip")}>
+                    <div className="flex items-center gap-1.5">
+                      <span>NIP</span>
+                      {renderSortIcon("nip")}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 cursor-pointer select-none group" onClick={() => handleSort("name")}>
+                    <div className="flex items-center gap-1.5">
+                      <span>Name</span>
+                      {renderSortIcon("name")}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 cursor-pointer select-none group" onClick={() => handleSort("position_id")}>
+                    <div className="flex items-center gap-1.5">
+                      <span>Jabatan</span>
+                      {renderSortIcon("position_id")}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 cursor-pointer select-none group" onClick={() => handleSort("joined_at")}>
+                    <div className="flex items-center gap-1.5">
+                      <span>Tanggal Masuk</span>
+                      {renderSortIcon("joined_at")}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
                       Loading employees...
                     </td>
                   </tr>
                 ) : employees.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
                       No employees found.
                     </td>
                   </tr>
@@ -145,26 +217,11 @@ export default function EmployeesPage() {
                       <td className="px-6 py-4 font-medium text-slate-900">{employee.id}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{employee.nip}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{employee.name}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span>{employee.email}</span>
-                          <span className="text-xs text-slate-400">{employee.phone}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{employee.employment_type}</td>
+                      <td className="px-6 py-4 font-medium text-slate-900">{employee?.position?.name ?? '-'}</td>
                       <td className="px-6 py-4">
                         {new Date(employee.joined_at).toLocaleDateString("id-ID", {
                           day: "numeric", month: "short", year: "numeric"
                         })}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${
-                          employee.status === "ACTIVE" 
-                            ? "text-green-700 bg-green-100 border-green-200"
-                            : "text-slate-700 bg-slate-100 border-slate-200"
-                        }`}>
-                          {employee.status}
-                        </span>
                       </td>
                     </tr>
                   ))
@@ -172,6 +229,50 @@ export default function EmployeesPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-600">
+            <div className="flex items-center gap-2">
+              <span>Show</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="border border-slate-300 rounded px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <span>entries per page (Total: {meta.total})</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="mr-2">
+                Page <strong>{meta.page}</strong> of <strong>{meta.total_pages || 1}</strong>
+              </span>
+              <button
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={meta.page <= 1 || isLoading}
+                className="p-1.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Previous Page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setPage((prev) => Math.min(prev + 1, meta.total_pages))}
+                disabled={meta.page >= meta.total_pages || isLoading}
+                className="p-1.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Next Page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

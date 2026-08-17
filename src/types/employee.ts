@@ -1,3 +1,5 @@
+export type PositionType = "MANAGER" | "STAFF" | string;
+
 export interface EducationInput {
   education_level: string;
   school_name: string;
@@ -22,6 +24,14 @@ export interface CreateEmployeePayload {
   employment_type: string;
   status: string;
   educations: EducationInput[];
+}
+export interface Position {
+  id: number;
+  code: string;
+  name: string;
+  position_type: PositionType;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Employee {
@@ -49,6 +59,16 @@ export interface Employee {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  position?: Position | null;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  sort_by?: string;
+  sort_order?: string;
 }
 
 export interface EmployeeResponse {
@@ -58,4 +78,5 @@ export interface EmployeeResponse {
   timestamp: number;
   path: string;
   data: Employee[];
+  meta: PaginationMeta;
 }
